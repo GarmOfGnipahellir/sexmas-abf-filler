@@ -1,0 +1,143 @@
+import * as fs from 'fs';
+import * as readline from 'readline';
+import * as google from 'googleapis';
+import * as googleAuth from 'google-auth-library';
+import { ipcRenderer } from 'electron';
+
+// If modifying these scopes, delete your previously saved credentials
+// at ~/.credentials/sheets.googleapis.com-nodejs-quickstart.json
+var SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
+  process.env.USERPROFILE) + '/.credentials/';
+var TOKEN_PATH = TOKEN_DIR + 'sheets.googleapis.com-nodejs-quickstart.json';
+
+var BARLAG_SHEET_ID: string;
+var PERSONAL_SHEET_ID: string;
+
+export default function requestData(barlagSheetId: string, personalSheetId: string): any {
+  BARLAG_SHEET_ID = barlagSheetId;
+  PERSONAL_SHEET_ID = personalSheetId;
+
+  // Load client secrets from a local file.
+  fs.readFile('client_secret.json', function (err: any, content: any) {
+    if (err) {
+      console.log('Error loading client secret file: ' + err);
+      return;
+    }
+    // Authorize a client with the loaded credentials, then call the
+    // Google Sheets API.
+    authorize(JSON.parse(content), getData);
+  });
+}
+
+/**
+ * Create an OAuth2 client with the given credentials, and then execute the
+ * given callback function.
+ *
+ * @param {Object} credentials The authorization client credentials.
+ * @param {function} callback The callback to call with the authorized client.
+ */
+function authorize(credentials: any, callback: any): any {
+  var clientSecret = credentials.installed.client_secret;
+  var clientId = credentials.installed.client_id;
+  var redirectUrl = credentials.installed.redirect_uris[0];
+  var auth = new googleAuth();
+  var oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUrl);
+
+  // Check if we have previously stored a token.
+  fs.readFile(TOKEN_PATH, function (err: any, token: any) {
+    if (err) {
+      return getNewToken(oauth2Client, callback);
+    } else {
+      oauth2Client.credentials = JSON.parse(token);
+      return callback(oauth2Client);
+    }
+  });
+}
+
+
+/**
+ * Get and store new token after prompting for user authorization, and then
+ * execute the given callback with the authorized OAuth2 client.
+ *
+ * @param {google.auth.OAuth2} oauth2Client The OAuth2 client to get token for.
+ * @param {getEventsCallback} callback The callback to call with the authorized
+ *     client.
+ */
+function getNewToken(oauth2Client: any, callback: any) {
+  var authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: SCOPES
+  });
+  console.log('Authorize this app by visiting this url: ', authUrl);
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  rl.question('Enter the code from that page here: ', function (code) {
+    rl.close();
+    oauth2Client.getToken(code, function (err: any, token: any) {
+      if (err) {
+        console.log('Error while trying to retrieve access token', err);
+        return;
+      }
+      oauth2Client.credentials = token;
+      storeToken(token);
+      return callback(oauth2Client);
+    });
+  });
+}
+
+
+/**
+ * Store token to disk be used in later program executions.
+ *
+ * @param {Object} token The token to store to disk.
+ */
+function storeToken(token: any) {
+  try {
+    fs.mkdirSync(TOKEN_DIR);
+  } catch (err) {
+    if (err.code != 'EEXIST') {
+      throw err;
+    }
+  }
+  fs.writeFile(TOKEN_PATH, JSON.stringify(token));
+  console.log('Token stored to ' + TOKEN_PATH);
+}
+
+/**
+ * Gets the data from the Barlag and Personal sheet.
+ */
+function getData(auth: any): any {
+  var result: any = {
+    barlag: [],
+    personal: []
+  };
+  var sheets = google.sheets('v4');
+  sheets.spreadsheets.values.get({
+    spreadsheetId: BARLAG_SHEET_ID,
+    range: 'A:ZZ',
+    auth: auth 
+  }, function (err: any, response: any) {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    result.barlag = response.values;
+
+    sheets.spreadsheets.values.get({
+      spreadsheetId: PERSONAL_SHEET_ID,
+      range: 'A:ZZ',
+      auth: auth 
+    }, function (err: any, response: any) {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      result.personal = response.values;
+      
+      ipcRenderer.send('requestData', result);
+    });
+  });
+}

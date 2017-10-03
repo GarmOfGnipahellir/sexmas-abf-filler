@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link href="../node_modules/normalize.css/normalize.css" rel="stylesheet" />
+  <link href="../node_modules/@blueprintjs/core/dist/blueprint.css" rel="stylesheet" />
+</head>
+<body style="overflow: hidden; background-color: rgba(0,0,0,0); margin: 0" >
+  <div id="Personal"></div>
+</body>
+
+<script>window.exports = module.exports</script>
+<script type="text/tsx">
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+import {AppContainer} from 'react-hot-loader';
+
+let render = () => {
+  const { Personal } = require('./personal');
+  ReactDOM.render(<AppContainer><Personal /></AppContainer>, document.getElementById('Personal'));
+}
+
+render();
+if (module.hot) { module.hot.accept(render); }
+</script>
+</html>
