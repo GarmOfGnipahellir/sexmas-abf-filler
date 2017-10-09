@@ -83,6 +83,7 @@ function storeToken(token) {
 }
 
 function writeBarlag(auth) {
+    // Get Barlags sheet
     var sheets = google.sheets('v4')
     sheets.spreadsheets.values.get({
         auth: auth,
@@ -93,161 +94,180 @@ function writeBarlag(auth) {
             console.log('The API returned an error: ' + err)
             return
         }
-        var rows = response.values
-        if (rows.length == 0) {
+        var barlagRows = response.values
+        if (barlagRows.length == 0) {
             console.log('No data found.')
         } else {
-            j = -1
-            k = 0
-            barlag = []
-            isNew = false
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i]
-                if (row.length <= 1) {
-                    j++
-                    console.log('Barlag:')
-                    isNew = true
-                    barlag[j] = {
-                        ledare: {},
-                        personal: []
-                    }
-                    k = 0
-                } else if (isNew) {
-                    isNew = false
-                    console.log('Searching for ' + row[0])
-                    barlag[j].ledare = getPersonalData(auth, sheets, row[0])
-                } else {
-                    barlag[j].personal[k] = getPersonalData(auth, sheets, row[0])
-                    k++
+            // Then get Personal Sheet
+            sheets.spreadsheets.values.get({
+                auth: auth,
+                spreadsheetId: options.sheetPersonalId,
+                range: options.sheetPersonalRange
+            }, function (err, response) {
+                if (err) {
+                    console.log('The API returned an error: ' + err)
+                    return
                 }
-            }
-            console.log(barlag)
+                var personalRows = response.values
+                if (personalRows.length == 0) {
+                    console.log('No data found.')
+                } else {
+                    // Finally do stuff with them
+                    j = -1
+                    k = 0
+                    barlag = []
+                    isNew = false
+                    for (var i = 0; i < barlagRows.length; i++) {
+                        var row = barlagRows[i]
+                        if (row.length <= 1) {
+                            j++
+                            console.log('Barlag:')
+                            isNew = true
+                            barlag[j] = {
+                                ledare: {},
+                                personal: []
+                            }
+                            k = 0
+                        } else if (isNew) {
+                            isNew = false
+                            console.log('Searching for ' + row[0])
+                            barlag[j].ledare = getPersonalData(personalRows, row[0])
+                        } else {
+                            barlag[j].personal[k] = getPersonalData(personalRows, row[0])
+                            k++
+                        }
+                    }
+                    fillForm(barlag)
+                }
+            })
         }
     })
 }
 
-function getPersonalData(auth, sheets, name) {
-    sheets.spreadsheets.values.get({
-        auth: auth,
-        spreadsheetId: options.sheetPersonalId,
-        range: options.sheetPersonalRange
-    }, function (err, response) {
-        if (err) {
-            console.log('The API returned an error: ' + err)
-            return
-        }
-        var rows = response.values
-        if (rows.length == 0) {
-            console.log('No data found.')
-        } else {
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i]
+function getPersonalData(rows, name) {
+    if (rows.length == 0) {
+        console.log('No data found.')
+    } else {
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i]
 
-                console.log('Not matching ' + row[0])
-                if (row[0] == name) {
-                    console.log('Found ' + row[0])
-                    return row[0]
+            if (row[0] == name) {
+                //console.log('Found ' + row[0])
+                return {
+                    name: row[0], // Namn
+                    mail: row[1], // Mail
+                    phone: row[2], // Telefon
+                    personnr: row[3], // Person NUmmer
+                    adress: row[4], // Adress
+                    postnum: row[5]  // Postnummer
                 }
             }
         }
-    })
+        console.log('Nothing matched ' + name)
+    }
 }
 
 // pdf
 var pdfFiller = require('pdffiller')
 
 function fillForm(data) {
-    var source = options.source
-    var output = options.output + '/Barlag'+data.number+'_Traversen.pdf'
+    for (var i = 0; i < 1; i++) {
+        var source = options.source
+        var output = options.output + 'Barlag' + (i+1) + '_Traversen.pdf'
 
-    var fields = {
-        'Ämne': 'Kassahantering (grp ' + data.number + ')',
-        'Startdatum': options.startDatum,
-        'Arrangör': 'Studentföreningen Campus Skellefteå',
-        'Dagar': 'Onsdagar, Fredagar, Lördagar',
-        'Lokal': 'Traversen, Campus Skellefteå',
-        'Tid': '21:00-01:00',
-        'Vad ska ni lära er?': 'Lära sig att servera kunder och hantera en kassaapparat.',
-        'Vad ska ni göra?': 'Genom praktiskt arbete och instruktioner från erfarna instruktörer samt kompendium.',
-        'Studiematerial': 'Kompendium samt praktisk övning på digitalt kassasystem.',
-        'Antal veckor': options.antalVeckor,
-        'Antal träffar per vecka': options.traffarPerVecka,
-        'Antal timmar per träff': options.timmarPerTraff,
-        'Ledare Adress': '',
-        'Ledare E-mail': '',
-        'Ledare Namn': '',
-        'Ledare Personnummer': '',
-        'Ledare Postadress': '',
-        'Ledare Telefon': '',
-        'Adress 1': '',
-        'Adress 2': '',
-        'Adress 3': '',
-        'Adress 4': '',
-        'Adress 5': '',
-        'Adress 6': '',
-        'Adress 7': '',
-        'Adress 8': '',
-        'E-mail 1': '',
-        'E-mail 2': '',
-        'E-mail 3': '',
-        'E-mail 4': '',
-        'E-mail 5': '',
-        'E-mail 6': '',
-        'E-mail 7': '',
-        'E-mail 8': '',
-        'Namn 1': '',
-        'Namn 2': '',
-        'Namn 3': '',
-        'Namn 4': '',
-        'Namn 5': '',
-        'Namn 6': '',
-        'Namn 7': '',
-        'Namn 8': '',
-        'Personnummer 1': '',
-        'Personnummer 1:2': '',
-        'Personnummer 2': '',
-        'Personnummer 2:2': '',
-        'Personnummer 3': '',
-        'Personnummer 3:2': '',
-        'Personnummer 4': '',
-        'Personnummer 4:2': '',
-        'Personnummer 5': '',
-        'Personnummer 5:2': '',
-        'Personnummer 6': '',
-        'Personnummer 6:2': '',
-        'Personnummer 7': '',
-        'Personnummer 7:2': '',
-        'Personnummer 8': '',
-        'Personnummer 8:2': '',
-        'Postadress 1': '',
-        'Postadress 2': '',
-        'Postadress 3': '',
-        'Postadress 4': '',
-        'Postadress 5': '',
-        'Postadress 6': '',
-        'Postadress 7': '',
-        'Postadress 8': '',
-        'Telefon 1': '',
-        'Telefon 2': '',
-        'Telefon 3': '',
-        'Telefon 4': '',
-        'Telefon 5': '',
-        'Telefon 6': '',
-        'Telefon 7': '',
-        'Telefon 8': ''
+        var barlag = data[i]
+        console.log('-- BARLAG NUMMER '+(i+1))
+        console.log(JSON.stringify(barlag, null, 2))
+        var fields = {
+            'Ämne': 'Kassahantering (grp ' + (i+1) + ')',
+            'Startdatum': options.startDatum,
+            'Arrangör': 'Studentföreningen Campus Skellefteå',
+            'Dagar': 'Onsdagar, Fredagar, Lördagar',
+            'Lokal': 'Traversen, Campus Skellefteå',
+            'Tid': '21:00-01:00',
+            'Vad ska ni lära er?': 'Lära sig att servera kunder och hantera en kassaapparat.',
+            'Vad ska ni göra?': 'Genom praktiskt arbete och instruktioner från erfarna instruktörer samt kompendium.',
+            'Studiematerial': 'Kompendium samt praktisk övning på digitalt kassasystem.',
+            'Antal veckor': options.antalVeckor,
+            'Antal träffar per vecka': options.traffarPerVecka,
+            'Antal timmar per träff': options.timmarPerTraff,
+            'Ledare Adress': barlag.ledare.adress || '',
+            'Ledare E-mail': barlag.ledare.mail || '',
+            'Ledare Namn': barlag.ledare.name || '',
+            'Ledare Personnummer': barlag.ledare.personnr || '',
+            'Ledare Postadress': barlag.ledare.postnum || '',
+            'Ledare Telefon': barlag.ledare.phone || '',
+            'Adress 1': '',
+            'Adress 2': '',
+            'Adress 3': '',
+            'Adress 4': '',
+            'Adress 5': '',
+            'Adress 6': '',
+            'Adress 7': '',
+            'Adress 8': '',
+            'E-mail 1': '',
+            'E-mail 2': '',
+            'E-mail 3': '',
+            'E-mail 4': '',
+            'E-mail 5': '',
+            'E-mail 6': '',
+            'E-mail 7': '',
+            'E-mail 8': '',
+            'Namn 1': '',
+            'Namn 2': '',
+            'Namn 3': '',
+            'Namn 4': '',
+            'Namn 5': '',
+            'Namn 6': '',
+            'Namn 7': '',
+            'Namn 8': '',
+            'Personnummer 1': '',
+            'Personnummer 1:2': '',
+            'Personnummer 2': '',
+            'Personnummer 2:2': '',
+            'Personnummer 3': '',
+            'Personnummer 3:2': '',
+            'Personnummer 4': '',
+            'Personnummer 4:2': '',
+            'Personnummer 5': '',
+            'Personnummer 5:2': '',
+            'Personnummer 6': '',
+            'Personnummer 6:2': '',
+            'Personnummer 7': '',
+            'Personnummer 7:2': '',
+            'Personnummer 8': '',
+            'Personnummer 8:2': '',
+            'Postadress 1': '',
+            'Postadress 2': '',
+            'Postadress 3': '',
+            'Postadress 4': '',
+            'Postadress 5': '',
+            'Postadress 6': '',
+            'Postadress 7': '',
+            'Postadress 8': '',
+            'Telefon 1': '',
+            'Telefon 2': '',
+            'Telefon 3': '',
+            'Telefon 4': '',
+            'Telefon 5': '',
+            'Telefon 6': '',
+            'Telefon 7': '',
+            'Telefon 8': ''
+        }
+
+        console.log(JSON.stringify(fields, null, 2))
+        pdfFiller.fillForm(source, output, fields, function (err) {
+            if (err) throw err
+            console.log('Outputted ' + output)
+        })
+
+        /*var nameRegex = null
+
+        pdfFiller.generateFDFTemplate(source, nameRegex, function (err, fdfData) {
+            if (err) throw err
+            console.log(fdfData)
+        })*/
     }
-
-    pdfFiller.fillForm(source, output, fields, function (err) {
-        if (err) throw err
-        console.log('Outputted ' + output)
-    })
-
-    var nameRegex = null
-
-    pdfFiller.generateFDFTemplate(source, nameRegex, function (err, fdfData) {
-        if (err) throw err
-        console.log(fdfData)
-    })
 }
 
 /* Format
