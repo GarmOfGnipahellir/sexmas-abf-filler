@@ -2,6 +2,8 @@ import { app, ipcMain, BrowserWindow } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { enableLiveReload } from 'electron-compile';
 
+import writePDF from './pdfwriter';
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow: Electron.BrowserWindow | null = null;
@@ -23,8 +25,7 @@ const createWindow = async () => {
   mainWindow.loadURL(`file://${__dirname}/index.html`);
 
   ipcMain.on('requestData', (event: any, arg: any) => {
-    global.sheetData = arg;
-    mainWindow.loadURL(`file://${__dirname}/personal.html`);
+    writePDF(arg);
   });
 
   // Open the DevTools.

@@ -117,7 +117,7 @@ function getData(auth: any): any {
   var sheets = google.sheets('v4');
   sheets.spreadsheets.values.get({
     spreadsheetId: BARLAG_SHEET_ID,
-    range: 'A:ZZ',
+    range: 'A2:ZZ',
     auth: auth 
   }, function (err: any, response: any) {
     if (err) {
@@ -128,7 +128,7 @@ function getData(auth: any): any {
 
     sheets.spreadsheets.values.get({
       spreadsheetId: PERSONAL_SHEET_ID,
-      range: 'A:ZZ',
+      range: 'A2:ZZ',
       auth: auth 
     }, function (err: any, response: any) {
       if (err) {
