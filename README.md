@@ -21,13 +21,13 @@ var options = {
 To run this you need NodeJS and NPM.
 With this repo cloned, run this command: ```npm i```
 ### Google API
-You also need to get a ```client_secret.json``` from Sexmästeriet's Google API Console.`
+You also need to get a ```client_secret.json``` from Sexmästeriet's Google API Console.
 
 Go to https://console.cloud.google.com/apis/credentials and log in with Sexmästeriet's Google account.
 
 Download the ```Sexmas ABF Filler``` OAuth 2.0 Client ID and place it in the root of the cloned repo 
 (it must be named ```client_secret.json```).
 ### PDFtk
-You need to get PDFtk from this site https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/ (seems to only work on windows).
+You need to get PDFtk from this site https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit (seems to only work on windows).
 ### Others
 Some tools require other dependecies like compilers (C++) but it should tell you what you're missing.
